@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Earnings Plays Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0e0e10;--bg2:#18181b;--bg3:#1f1f23;--bg4:#27272a;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#e4e4e7;--text2:#a1a1aa;--text3:#71717a;
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.1);
+  --red:#ef4444;--red-bg:rgba(239,68,68,0.1);
+  --blue:#3b82f6;--blue-bg:rgba(59,130,246,0.1);
+  --amber:#f59e0b;--amber-bg:rgba(245,158,11,0.1);
+  --purple:#a855f7;--purple-bg:rgba(168,85,247,0.1);
+  --radius:8px;--radius-lg:12px;
+  --font:'SF Mono','Fira Code','Cascadia Code',monospace;
+  --font-sans:system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100vh;font-size:14px;}
+.shell{display:flex;min-height:100vh;}
+.sidebar{width:200px;min-width:200px;background:var(--bg2);border-right:0.5px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;position:fixed;top:0;left:0;bottom:0;z-index:10;}
+.logo{padding:0 1.25rem 1.5rem;border-bottom:0.5px solid var(--border);margin-bottom:1rem;}
+.logo-title{font-size:13px;font-weight:600;color:var(--text);}
+.logo-sub{font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--font);}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 1.25rem;cursor:pointer;font-size:13px;color:var(--text2);border-left:2px solid transparent;transition:all 0.1s;user-select:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+.nav-item.active{color:var(--text);border-left-color:var(--blue);background:rgba(59,130,246,0.06);}
+.nav-item .ico{font-size:14px;width:18px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--purple-bg);color:var(--purple);font-size:9px;padding:1px 5px;border-radius:100px;font-weight:600;}
+.nav-bottom{margin-top:auto;border-top:0.5px solid var(--border);padding-top:1rem;}
+.main{margin-left:200px;padding:2rem;flex:1;max-width:1100px;}
+.page-header{margin-bottom:1.75rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.page-title{font-size:18px;font-weight:600;color:var(--text);}
+.page-sub{font-size:12px;color:var(--text3);margin-top:3px;font-family:var(--font);}
+.view{display:none;}.view.active{display:block;}
+.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem;}
+.mc{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;}
+.mc-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+.mc-val{font-size:22px;font-weight:600;font-family:var(--font);color:var(--text);}
+.mc-val.pos{color:var(--green);}.mc-val.neg{color:var(--red);}
+.chart-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem;}
+.card-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg-full{grid-column:1/-1;}
+.fgrp{display:flex;flex-direction:column;gap:5px;}
+.flbl{font-size:11px;color:var(--text3);}
+.fgrp input,.fgrp select,.fgrp textarea{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:13px;padding:8px 10px;width:100%;outline:none;font-family:var(--font-sans);}
+.fgrp input:focus,.fgrp select:focus,.fgrp textarea:focus{border-color:var(--blue);}
+.fgrp select option{background:var(--bg2);}
+.fgrp textarea{resize:vertical;}
+.btn{padding:8px 18px;border-radius:var(--radius);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);background:transparent;color:var(--text);transition:background 0.1s;}
+.btn:hover{background:var(--bg3);}.btn:disabled{opacity:0.4;cursor:default;}
+.btn-primary{background:var(--blue-bg);border-color:var(--blue);color:var(--blue);}
+.btn-primary:hover{background:rgba(59,130,246,0.2);}
+.btn-purple{background:var(--purple-bg);border-color:var(--purple);color:var(--purple);}
+.btn-purple:hover{background:rgba(168,85,247,0.2);}
+.btn-amber{background:var(--amber-bg);border-color:var(--amber);color:var(--amber);}
+.btn-amber:hover{background:rgba(245,158,11,0.2);}
+.btn-green{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+.btn-green:hover{background:rgba(34,197,94,0.2);}
+.btn-sm{font-size:11px;padding:4px 10px;}
+.btn-ai{background:var(--blue-bg);border-color:rgba(59,130,246,0.3);color:var(--blue);font-size:10px;padding:3px 8px;}
+.btn-ai.cached{background:var(--green-bg);border-color:rgba(34,197,94,0.3);color:var(--green);}
+.btn-danger{color:var(--red);border-color:transparent;background:transparent;font-size:16px;padding:0 4px;}
+.btn-danger:hover{background:var(--red-bg);}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;padding:8px 10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);border-bottom:0.5px solid var(--border);}
+td{padding:10px 10px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:500;}
+.badge-win{background:var(--green-bg);color:var(--green);}
+.badge-loss{background:var(--red-bg);color:var(--red);}
+.badge-open{background:var(--bg3);color:var(--text3);}
+.mono{font-family:var(--font);}
+.filters{display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;}
+.filters select{max-width:160px;}
+.empty{text-align:center;padding:3rem 0;color:var(--text3);font-size:13px;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:1.5rem;width:min(600px,94vw);max-height:90vh;overflow-y:auto;}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;}
+.modal-title{font-size:14px;font-weight:600;color:var(--text);}
+.modal-sub{font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--font);}
+.ai-block{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);padding:0.875rem 1rem;font-size:13px;line-height:1.7;color:var(--text);margin-bottom:0.5rem;}
+.ai-block.loading{color:var(--text3);font-style:italic;}
+.chip{display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;border-radius:100px;margin-bottom:6px;margin-top:0.75rem;}
+.chip-g{background:var(--green-bg);color:var(--green);}
+.chip-r{background:var(--red-bg);color:var(--red);}
+.chip-b{background:var(--blue-bg);color:var(--blue);}
+.chip-a{background:var(--amber-bg);color:var(--amber);}
+.chip-p{background:var(--purple-bg);color:var(--purple);}
+.chip-n{background:var(--bg3);color:var(--text3);}
+.settings-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;max-width:480px;margin-bottom:1.25rem;}
+.settings-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:1rem;}
+.api-key-row{display:flex;gap:8px;}
+.api-key-row input{flex:1;font-family:var(--font);}
+.key-status{font-size:11px;margin-top:6px;}
+.key-ok{color:var(--green);}.key-no{color:var(--text3);}
+.mkt-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;}
+.mkt-name{font-size:12px;color:var(--text3);width:70px;font-family:var(--font);}
+.mkt-bar-wrap{flex:1;background:var(--bg3);border-radius:3px;height:4px;}
+.mkt-bar{background:var(--blue);height:4px;border-radius:3px;opacity:0.6;}
+.mkt-count{font-size:12px;font-family:var(--font);color:var(--text2);}
+.msg{font-size:12px;margin-top:8px;min-height:16px;}
+.msg.ok{color:var(--green);}.msg.err{color:var(--red);}
+.pct-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;}
+.pct-card{background:var(--bg3);border-radius:var(--radius);padding:1rem;}
+.pct-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
+.pct-val{font-size:26px;font-weight:600;font-family:var(--font);}
+.pct-val.high{color:var(--green);}.pct-val.mid{color:var(--amber);}.pct-val.low{color:var(--red);}
+.cand-grid{display:grid;gap:14px;margin-top:1.5rem;}
+.cand-card{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:1.25rem;position:relative;}
+.cand-card.top-pick{border-color:rgba(168,85,247,0.5);box-shadow:0 0 0 1px rgba(168,85,247,0.15);}
+.cand-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.875rem;}
+.cand-ticker{font-size:20px;font-weight:700;font-family:var(--font);color:var(--text);}
+.cand-name{font-size:11px;color:var(--text3);margin-top:2px;}
+.cand-score-wrap{text-align:right;}
+.cand-score{font-size:24px;font-weight:700;font-family:var(--font);}
+.cand-score-lbl{font-size:10px;color:var(--text3);}
+.cand-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:0.875rem;}
+.pill{font-size:10px;padding:2px 8px;border-radius:100px;background:var(--bg3);color:var(--text2);border:0.5px solid var(--border);}
+.pill.good{background:var(--green-bg);color:var(--green);border-color:rgba(34,197,94,0.2);}
+.pill.warn{background:var(--amber-bg);color:var(--amber);border-color:rgba(245,158,11,0.2);}
+.pill.bad{background:var(--red-bg);color:var(--red);border-color:rgba(239,68,68,0.2);}
+.cand-rationale{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:1rem;padding:0.75rem;background:var(--bg3);border-radius:var(--radius);}
+.cand-save-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:0.875rem;border-top:0.5px solid var(--border);}
+.cand-save-row input{width:110px;font-family:var(--font);}
+.cand-save-row label{font-size:11px;color:var(--text3);}
+.top-badge{position:absolute;top:-1px;right:14px;background:var(--purple);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:0 0 6px 6px;letter-spacing:0.05em;}
+.search-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:1.25rem;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1rem;}
+.search-bar .fgrp{min-width:120px;}
+.status-stream{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;font-size:12px;color:var(--text3);font-family:var(--font);line-height:1.8;margin-top:1rem;white-space:pre-wrap;}
+/* ── FRAMEWORK PAGE ── */
+.fw-section{margin-bottom:2rem;}
+.fw-section-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.875rem;padding-bottom:0.5rem;border-bottom:0.5px solid var(--border);}
+.fw-criteria{display:grid;gap:10px;}
+.fw-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:start;}
+.fw-card.hard-filter{border-color:rgba(239,68,68,0.35);background:rgba(239,68,68,0.04);}
+.fw-card.top-factor{border-color:rgba(168,85,247,0.35);background:rgba(168,85,247,0.04);}
+.fw-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:var(--font);flex-shrink:0;}
+.fw-num.blue{background:var(--blue-bg);color:var(--blue);}
+.fw-num.red{background:var(--red-bg);color:var(--red);}
+.fw-num.purple{background:var(--purple-bg);color:var(--purple);}
+.fw-num.green{background:var(--green-bg);color:var(--green);}
+.fw-num.amber{background:var(--amber-bg);color:var(--amber);}
+.fw-body{}
+.fw-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;}
+.fw-desc{font-size:12px;color:var(--text2);line-height:1.65;}
+.fw-pts{font-size:18px;font-weight:700;font-family:var(--font);color:var(--text3);white-space:nowrap;}
+.fw-pts span{font-size:10px;font-weight:400;display:block;text-align:right;margin-top:1px;}
+.fw-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.fw-tag{font-size:10px;padding:2px 8px;border-radius:100px;}
+.fw-tag.g{background:var(--green-bg);color:var(--green);}
+.fw-tag.r{background:var(--red-bg);color:var(--red);}
+.fw-tag.b{background:var(--blue-bg);color:var(--blue);}
+.fw-tag.a{background:var(--amber-bg);color:var(--amber);}
+.fw-tag.p{background:var(--purple-bg);color:var(--purple);}
+.fw-tag.n{background:var(--bg3);color:var(--text3);}
+.fw-disq{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;}
+.fw-disq-item{background:var(--red-bg);border:0.5px solid rgba(239,68,68,0.2);border-radius:var(--radius);padding:0.75rem 1rem;font-size:12px;color:var(--text2);display:flex;gap:8px;align-items:flex-start;line-height:1.5;}
+.fw-disq-item::before{content:'✕';color:var(--red);font-weight:700;flex-shrink:0;margin-top:1px;}
+.fw-timing{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.fw-tm-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center;}
+.fw-tm-card.optimal{border-color:rgba(34,197,94,0.4);background:rgba(34,197,94,0.05);}
+.fw-tm-card.ok{border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.05);}
+.fw-tm-card.avoid{border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.04);}
+.fw-tm-label{font-size:18px;font-weight:700;font-family:var(--font);margin-bottom:4px;}
+.fw-tm-label.g{color:var(--green);}.fw-tm-label.a{color:var(--amber);}.fw-tm-label.r{color:var(--red);}
+.fw-tm-title{font-size:11px;font-weight:500;color:var(--text);margin-bottom:4px;}
+.fw-tm-desc{font-size:11px;color:var(--text3);line-height:1.5;}
+.fw-markets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
+.fw-mkt-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:0.875rem 1rem;}
+.fw-mkt-name{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;font-family:var(--font);}
+.fw-mkt-detail{font-size:11px;color:var(--text3);line-height:1.5;}
+.score-bar{margin-top:1rem;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;}
+.score-bar-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem;}
+.score-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.score-row-lbl{font-size:11px;color:var(--text2);width:180px;flex-shrink:0;}
+.score-row-bar{flex:1;background:var(--bg3);border-radius:3px;height:6px;}
+.score-row-fill{height:6px;border-radius:3px;}
+.score-row-pts{font-size:11px;font-family:var(--font);color:var(--text3);white-space:nowrap;}
+@media(max-width:640px){.sidebar{width:54px;min-width:54px;}.nav-item span,.logo-title,.logo-sub{display:none;}.main{margin-left:54px;padding:1.25rem;}.form-grid{grid-template-columns:1fr;}.fg-full{grid-column:1;}.fw-card{grid-template-columns:auto 1fr;}.fw-pts{display:none;}.fw-timing{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">Earnings Plays</div>
+    <div class="logo-sub">framework v2</div>
+  </div>
+  <nav>
+    <div class="nav-item active" onclick="nav('dash')"><span class="ico">◈</span><span>Dashboard</span></div>
+    <div class="nav-item" onclick="nav('candidatos')"><span class="ico">◎</span><span>Candidatos IA</span><span class="nav-badge">AI</span></div>
+    <div class="nav-item" onclick="nav('nueva')"><span class="ico">＋</span><span>Nueva op.</span></div>
+    <div class="nav-item" onclick="nav('hist')"><span class="ico">≡</span><span>Historial</span></div>
+    <div class="nav-item" onclick="nav('framework')"><span class="ico">◻</span><span>Framework</span></div>
+  </nav>
+  <div class="nav-bottom">
+    <div class="nav-item" onclick="nav('settings')"><span class="ico">⚙</span><span>Settings</span></div>
+  </div>
+</aside>
+
+<main class="main">
+
+<div id="view-dash" class="view active">
+  <div class="page-header">
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date"></div></div>
+    <button class="btn btn-amber" onclick="openWeeklyReview()">Review semanal IA</button>
+  </div>
+  <div id="m-grid" class="metrics"></div>
+  <div class="chart-card">
+    <div class="card-lbl">P&L acumulado (%)</div>
+    <canvas id="pnl-chart" height="140"></canvas>
+  </div>
+  <div class="card-lbl" style="margin-bottom:0.75rem;">Distribución por mercado</div>
+  <div id="mkt-dist"></div>
+</div>
+
+<div id="view-candidatos" class="view">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Candidatos IA</div>
+      <div class="page-sub">Claude busca y puntúa oportunidades en tiempo real con web search</div>
+    </div>
+  </div>
+  <div class="search-bar">
+    <div class="fgrp">
+      <label class="flbl">Mercados</label>
+      <select id="c-mkt">
+        <option value="US">US (NYSE + NASDAQ)</option>
+        <option value="EU">Europa (LSE, XETRA, Euronext)</option>
+        <option value="ALL">Todos los mercados</option>
+      </select>
+    </div>
+    <div class="fgrp">
+      <label class="flbl">Ventana</label>
+      <select id="c-window">
+        <option value="24h">Próximas 24h</option>
+        <option value="48h" selected>Próximas 48h</option>
+        <option value="week">Esta semana</option>
+      </select>
+    </div>
+    <div class="fgrp">
+      <label class="flbl">Score mínimo</label>
+      <select id="c-minscore">
+        <option value="6">6.0+</option>
+        <option value="7" selected>7.0+</option>
+        <option value="8">8.0+</option>
+      </select>
+    </div>
+    <button class="btn btn-purple" id="btn-buscar" onclick="buscarCandidatos()">Buscar candidatos</button>
+  </div>
+  <div id="c-stream" class="status-stream" style="display:none;"></div>
+  <div id="cand-grid" class="cand-grid"></div>
+</div>
+
+<div id="view-nueva" class="view">
+  <div class="page-header">
+    <div><div class="page-title">Nueva operación</div><div class="page-sub">registro manual de parámetros</div></div>
+  </div>
+  <div class="form-grid">
+    <div class="fgrp"><label class="flbl">Ticker</label><input type="text" id="f-tk" placeholder="AAPL"></div>
+    <div class="fgrp"><label class="flbl">Mercado</label>
+      <select id="f-mkt"><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>XETRA</option><option>Euronext</option><option>TSX</option><option>ASX</option><option>TSE</option><option>HKEX</option></select>
+    </div>
+    <div class="fgrp"><label class="flbl">Fecha entrada</label><input type="date" id="f-ed"></div>
+    <div class="fgrp"><label class="flbl">Precio entrada</label><input type="number" id="f-ep" placeholder="100.00" step="0.01"></div>
+    <div class="fgrp"><label class="flbl">Fecha salida</label><input type="date" id="f-xd"></div>
+    <div class="fgrp"><label class="flbl">Precio salida</label><input type="number" id="f-xp" placeholder="105.00" step="0.01"></div>
+    <div class="fgrp"><label class="flbl">Score (0–10)</label><input type="number" id="f-sc" min="0" max="10" step="0.5" placeholder="7.5"></div>
+    <div class="fgrp"><label class="flbl">Timing entrada</label>
+      <select id="f-tm"><option value="2d">2 días antes</option><option value="1d">1 día antes</option><option value="sd">Mismo día</option></select>
+    </div>
+    <div class="fgrp"><label class="flbl">EPS Surprise histórico</label>
+      <select id="f-eps"><option value="beat">Beat ↑</option><option value="inline">In-Line →</option><option value="miss">Miss ↓</option></select>
+    </div>
+    <div class="fgrp"><label class="flbl">Revisión estimados</label>
+      <select id="f-rev"><option value="raised">Subidas ↑</option><option value="flat">Planas →</option><option value="lowered">Bajadas ↓</option></select>
+    </div>
+    <div class="fgrp"><label class="flbl">Short Interest</label>
+      <select id="f-si"><option value="high">Alto &gt;20%</option><option value="med">Medio 5–20%</option><option value="low">Bajo &lt;5%</option></select>
+    </div>
+    <div class="fgrp"><label class="flbl">Vol. Acumulación ≥1.0x</label>
+      <select id="f-vol"><option value="yes">Sí ✓</option><option value="no">No ✗</option></select>
+    </div>
+    <div class="fgrp fg-full"><label class="flbl">Notas / contexto macro</label>
+      <textarea id="f-nt" rows="3" placeholder="Contexto macro, razón de entrada, observaciones..."></textarea>
+    </div>
+  </div>
+  <button class="btn btn-primary" style="margin-top:14px;" onclick="addTrade()">Guardar operación</button>
+  <div class="msg" id="f-msg"></div>
+</div>
+
+<div id="view-hist" class="view">
+  <div class="page-header">
+    <div><div class="page-title">Historial</div><div class="page-sub">todas las operaciones registradas</div></div>
+  </div>
+  <div class="filters">
+    <select onchange="renderHist()" id="fi-mkt"><option value="">Todos mercados</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>XETRA</option><option>Euronext</option><option>TSX</option><option>ASX</option><option>TSE</option><option>HKEX</option></select>
+    <select onchange="renderHist()" id="fi-res"><option value="">Todas</option><option value="win">Ganadoras</option><option value="loss">Perdedoras</option><option value="open">Abiertas</option></select>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Ticker</th><th>Mkt</th><th>Entrada</th><th>P&L %</th><th>Score</th>
+        <th>EPS</th><th>Rev.</th><th>Resultado</th><th>Lección IA</th><th>Patrón IA</th><th></th>
+      </tr></thead>
+      <tbody id="t-body"></tbody>
+    </table>
+  </div>
+  <div id="no-op" class="empty">No hay operaciones. Ve a "Candidatos IA" para empezar.</div>
+</div>
+
+<div id="view-framework" class="view">
+  <div class="page-header">
+    <div><div class="page-title">Framework de selección</div><div class="page-sub">EARNINGS_PLAY_GLOBAL_v2 · criterios, filtros y timing</div></div>
+  </div>
+
+  <!-- SCORING -->
+  <div class="fw-section">
+    <div class="fw-section-title">Criterios de scoring — máx. 10 puntos</div>
+
+    <div class="score-bar">
+      <div class="score-bar-title">Distribución de puntos</div>
+      <div class="score-row"><div class="score-row-lbl">EPS surprise + revisión estimados</div><div class="score-row-bar"><div class="score-row-fill" style="width:30%;background:var(--purple);"></div></div><div class="score-row-pts">3.0 pts</div></div>
+      <div class="score-row"><div class="score-row-lbl">Timing dentro de 48h</div><div class="score-row-bar"><div class="score-row-fill" style="width:20%;background:var(--blue);"></div></div><div class="score-row-pts">2.0 pts</div></div>
+      <div class="score-row"><div class="score-row-lbl">Vol. acumulación institucional</div><div class="score-row-bar"><div class="score-row-fill" style="width:20%;background:var(--red);"></div></div><div class="score-row-pts">2.0 pts</div></div>
+      <div class="score-row"><div class="score-row-lbl">Sentimiento social</div><div class="score-row-bar"><div class="score-row-fill" style="width:15%;background:var(--green);"></div></div><div class="score-row-pts">1.5 pts</div></div>
+      <div class="score-row"><div class="score-row-lbl">Short interest (amplificador)</div><div class="score-row-bar"><div class="score-row-fill" style="width:15%;background:var(--amber);"></div></div><div class="score-row-pts">1.5 pts</div></div>
+    </div>
+
+    <div class="fw-criteria" style="margin-top:1rem;">
+
+      <div class="fw-card top-factor">
+        <div class="fw-num purple">1</div>
+        <div class="fw-body">
+          <div class="fw-title">EPS surprise history + dirección revisiones de estimados <span style="font-size:10px;background:var(--purple-bg);color:var(--purple);padding:1px 6px;border-radius:100px;margin-left:4px;">Factor más predictivo</span></div>
+          <div class="fw-desc">Historial de beats consecutivos en los últimos 4 trimestres combinado con la dirección de las revisiones de estimados de analistas. Las revisiones al alza previas al earnings son la señal con mayor correlación estadística con movimiento positivo post-earnings. Misses consecutivos descalifican el setup.</div>
+          <div class="fw-tags">
+            <span class="fw-tag g">4 beats consecutivos → máx. peso</span>
+            <span class="fw-tag g">Revisiones al alza → +3pts</span>
+            <span class="fw-tag n">Revisiones planas → +1.5pts</span>
+            <span class="fw-tag r">Revisiones a la baja → 0pts</span>
+          </div>
+        </div>
+        <div class="fw-pts">3.0<span>pts</span></div>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-num blue">2</div>
+        <div class="fw-body">
+          <div class="fw-title">Timing earnings dentro de ventana 48h</div>
+          <div class="fw-desc">El earnings debe producirse dentro de las próximas 48 horas desde el momento de entrada. Setup iniciados fuera de esta ventana quedan fuera del framework salvo que el score global sea excepcionalmente alto (≥8.5) y el contexto macro lo justifique.</div>
+          <div class="fw-tags">
+            <span class="fw-tag g">Dentro de 48h → +2pts</span>
+            <span class="fw-tag a">49–72h → +1pt (tamaño reducido)</span>
+            <span class="fw-tag r">Más de 72h → no aplica framework</span>
+          </div>
+        </div>
+        <div class="fw-pts">2.0<span>pts</span></div>
+      </div>
+
+      <div class="fw-card hard-filter">
+        <div class="fw-num red">3</div>
+        <div class="fw-body">
+          <div class="fw-title">Volumen de acumulación institucional ≥ 1.0x <span style="font-size:10px;background:var(--red-bg);color:var(--red);padding:1px 6px;border-radius:100px;margin-left:4px;">Hard filter</span></div>
+          <div class="fw-desc">Volumen de los últimos 1–3 días vs. la media de 30 días. Si no se cumple el umbral mínimo de 1.0x, el candidato queda automáticamente descalificado independientemente del resto de criterios. Niveles ≥1.5x indican acumulación institucional activa y suman más peso al setup.</div>
+          <div class="fw-tags">
+            <span class="fw-tag g">≥ 1.5x → acumulación fuerte +2pts</span>
+            <span class="fw-tag a">1.0x – 1.5x → umbral mínimo +1pt</span>
+            <span class="fw-tag r">&lt; 1.0x → DESCALIFICA automáticamente</span>
+          </div>
+        </div>
+        <div class="fw-pts">2.0<span>pts</span></div>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-num green">4</div>
+        <div class="fw-body">
+          <div class="fw-title">Sentimiento social</div>
+          <div class="fw-desc">Análisis de sentimiento en StockTwits, Twitter/X y foros especializados (Reddit, Earnings Whispers). Se valora tanto la dirección del sentimiento como el momentum — un cambio brusco de negativo a positivo en los días previos al earnings es señal relevante. Fuentes: Unusual Whales, Barchart, StockTwits.</div>
+          <div class="fw-tags">
+            <span class="fw-tag g">Positivo + momentum creciente → +1.5pts</span>
+            <span class="fw-tag n">Neutro → +0.75pts</span>
+            <span class="fw-tag r">Negativo / bearish dominante → 0pts</span>
+          </div>
+        </div>
+        <div class="fw-pts">1.5<span>pts</span></div>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-num amber">5</div>
+        <div class="fw-body">
+          <div class="fw-title">Short interest — amplificador del movimiento</div>
+          <div class="fw-desc">El short interest alto no predice la dirección pero amplifica el movimiento en caso de beat. Un short squeeze post-earnings sobre una posición bajista elevada puede multiplicar el tamaño del movimiento. Se usa como amplificador del score, no como criterio principal.</div>
+          <div class="fw-tags">
+            <span class="fw-tag g">&gt; 20% → amplificador fuerte +1.5pts</span>
+            <span class="fw-tag a">5% – 20% → amplificador moderado +0.75pts</span>
+            <span class="fw-tag n">&lt; 5% → sin amplificación extra +0pts</span>
+          </div>
+        </div>
+        <div class="fw-pts">1.5<span>pts</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FILTROS DESCALIFICACION -->
+  <div class="fw-section">
+    <div class="fw-section-title">Filtros de descalificación automática</div>
+    <div class="fw-disq">
+      <div class="fw-disq-item">Volumen acumulación &lt; 1.0x vs media 30d</div>
+      <div class="fw-disq-item">Historial de misses &gt; 50% en últimos 4 trimestres</div>
+      <div class="fw-disq-item">Guidance negativo o profit warning reciente</div>
+      <div class="fw-disq-item">Revisiones de estimados a la baja en los 30d previos</div>
+      <div class="fw-disq-item">Score global &lt; 5.0 / 10</div>
+      <div class="fw-disq-item">Macro overlay negativo severo en el mercado específico</div>
+      <div class="fw-disq-item">Earnings en sesión extendida sin liquidez suficiente</div>
+    </div>
+  </div>
+
+  <!-- TIMING DE ENTRADA -->
+  <div class="fw-section">
+    <div class="fw-section-title">Timing de entrada</div>
+    <div class="fw-timing">
+      <div class="fw-tm-card optimal">
+        <div class="fw-tm-label g">T–2</div>
+        <div class="fw-tm-title">2 días antes — Óptimo</div>
+        <div class="fw-tm-desc">Entrada a tamaño completo. Mejor relación riesgo/beneficio. Permite capturar el movimiento pre-earnings y posicionarse antes de que el precio descuente el setup.</div>
+      </div>
+      <div class="fw-tm-card ok">
+        <div class="fw-tm-label a">T–1</div>
+        <div class="fw-tm-title">1 día antes — Aceptable</div>
+        <div class="fw-tm-desc">Entrada a tamaño reducido (50–70% del tamaño habitual). El precio ya puede haber descontado parte del setup. Solo si el score es ≥7.0.</div>
+      </div>
+      <div class="fw-tm-card avoid">
+        <div class="fw-tm-label r">T–0</div>
+        <div class="fw-tm-title">Mismo día — Evitar</div>
+        <div class="fw-tm-desc">Generalmente evitado. Solo justificado si el score es ≥8.5 y hay una señal de volumen intraday muy clara. Riesgo/beneficio desfavorable en la mayoría de casos.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SALIDA -->
+  <div class="fw-section">
+    <div class="fw-section-title">Timing de salida</div>
+    <div class="fw-criteria">
+      <div class="fw-card">
+        <div class="fw-num green">S</div>
+        <div class="fw-body">
+          <div class="fw-title">Salida post-earnings: apertura o primeros 30–60 minutos</div>
+          <div class="fw-desc">La salida se ejecuta en la apertura del día post-earnings o dentro de los primeros 30–60 minutos de sesión. El gap de apertura es donde se concentra el mayor movimiento. Mantener más allá de 60 minutos aumenta la exposición a reversiones sin aumentar el retorno esperado. Mercados europeos: ajustar a horario de apertura local.</div>
+          <div class="fw-tags">
+            <span class="fw-tag g">Apertura → prioridad 1</span>
+            <span class="fw-tag g">0–30 min → prioridad 2</span>
+            <span class="fw-tag a">30–60 min → aceptable con trailing stop</span>
+            <span class="fw-tag r">&gt; 60 min → fuera del framework</span>
+          </div>
+        </div>
+        <div class="fw-pts"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MERCADOS -->
+  <div class="fw-section">
+    <div class="fw-section-title">Mercados cubiertos + overlay macro</div>
+    <div class="fw-markets">
+      <div class="fw-mkt-card"><div class="fw-mkt-name">NYSE · NASDAQ</div><div class="fw-mkt-detail">Mercado principal. Mayor liquidez y cobertura de datos. VIX como overlay macro primario. Riesgo-off elevado = reducir tamaño.</div></div>
+      <div class="fw-mkt-card"><div class="fw-mkt-name">LSE (Londres)</div><div class="fw-mkt-detail">Overlay: FTSE 100, tipo de cambio GBP/USD, sentimiento BOE. Horario UK: ajustar timing de entrada y salida.</div></div>
+      <div class="fw-mkt-card"><div class="fw-mkt-name">XETRA (Frankfurt)</div><div class="fw-mkt-detail">Overlay: DAX, EUR/USD, política BCE. Mayor volatilidad en semanas de datos macro europeos.</div></div>
+      <div class="fw-mkt-card"><div class="fw-mkt-name">Euronext (París/Amsterdam)</div><div class="fw-mkt-detail">Overlay: CAC 40, AEX. Liquidez inferior a XETRA; ajustar tamaño de posición.</div></div>
+      <div class="fw-mkt-card"><div class="fw-mkt-name">TSX (Toronto)</div><div class="fw-mkt-detail">Overlay: correlación con commodities (petróleo, metales). Sectores energy y financials dominantes.</div></div>
+      <div class="fw-mkt-card"><div class="fw-mkt-name">ASX (Australia)</div><div class="fw-mkt-detail">Overlay: AUD/USD, materias primas, ciclo asiático. Horario: considerar sesión Asia-Pacífico.</div></div>
+      <div class="fw-mkt-card"><div class="fw-mkt-name">TSE (Tokio)</div><div class="fw-mkt-detail">Overlay: Nikkei, JPY, política BOJ. Alta correlación con USD/JPY. Sesión nocturna europea.</div></div>
+      <div class="fw-mkt-card"><div class="fw-mkt-name">HKEX (Hong Kong)</div><div class="fw-mkt-detail">Overlay: Hang Seng, riesgo regulatorio chino, CNH. Mayor volatilidad y riesgo geopolítico.</div></div>
+    </div>
+  </div>
+
+  <!-- FUENTES -->
+  <div class="fw-section">
+    <div class="fw-section-title">Fuentes de datos</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <span class="fw-tag b" style="font-size:11px;padding:4px 10px;">Unusual Whales — flujo institucional</span>
+      <span class="fw-tag b" style="font-size:11px;padding:4px 10px;">Barchart — volumen y opciones</span>
+      <span class="fw-tag b" style="font-size:11px;padding:4px 10px;">StockTwits — sentimiento social</span>
+      <span class="fw-tag b" style="font-size:11px;padding:4px 10px;">Earnings Whispers — historial EPS</span>
+      <span class="fw-tag b" style="font-size:11px;padding:4px 10px;">Finviz — screener y short interest</span>
+      <span class="fw-tag n" style="font-size:11px;padding:4px 10px;">Plataformas regionales EU/Asia</span>
+    </div>
+  </div>
+
+</div>
+
+<div id="view-settings" class="view">
+  <div class="page-header"><div><div class="page-title">Settings</div><div class="page-sub">configuración del dashboard</div></div></div>
+  <div class="settings-card">
+    <div class="settings-title">API Key de Anthropic</div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:1rem;line-height:1.6;">
+      Necesaria para todas las funciones IA. Obtén la tuya en <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue);">console.anthropic.com</a>.
+      Se guarda solo en localStorage de este navegador.
+    </p>
+    <div class="api-key-row">
+      <input type="password" id="api-key-input" placeholder="sk-ant-api03-...">
+      <button class="btn btn-primary" onclick="saveKey()">Guardar</button>
+    </div>
+    <div class="key-status" id="key-status"></div>
+  </div>
+  <div class="settings-card">
+    <div class="settings-title">Datos</div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:1rem;">Los datos viven en localStorage. Exporta regularmente como backup.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-sm" onclick="exportCSV()">Exportar CSV</button>
+      <button class="btn btn-sm" onclick="exportJSON()">Exportar JSON</button>
+      <button class="btn btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="clearAll()">Borrar todo</button>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<div class="modal-overlay" id="modal" onclick="maybeClose(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="modal-title" id="modal-title"></div><div class="modal-sub" id="modal-sub"></div></div>
+      <button class="btn btn-danger" onclick="closeModal()" style="font-size:20px;line-height:1;">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+let trades=[];let pnlChart=null;
+function loadTrades(){try{trades=JSON.parse(localStorage.getItem('ep_trades_v1')||'[]');}catch(e){trades=[];}}
+function saveTrades(){localStorage.setItem('ep_trades_v1',JSON.stringify(trades));}
+function getKey(){return localStorage.getItem('ep_api_key')||'';}
+function saveKey(){const k=document.getElementById('api-key-input').value.trim();if(!k.startsWith('sk-')){setKeyStatus('Formato inválido. Debe empezar por sk-',false);return;}localStorage.setItem('ep_api_key',k);setKeyStatus('API key guardada ✓',true);}
+function setKeyStatus(msg,ok){const el=document.getElementById('key-status');el.textContent=msg;el.className='key-status '+(ok?'key-ok':'key-no');}
+function loadKeyUI(){const k=getKey();if(k){document.getElementById('api-key-input').value=k;setKeyStatus('API key cargada ✓',true);}}
+
+function nav(page){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+page).classList.add('active');
+  const items=document.querySelectorAll('.nav-item');
+  const map={dash:0,candidatos:1,nueva:2,hist:3,framework:4,settings:5};
+  if(map[page]!==undefined)items[map[page]]?.classList.add('active');
+  if(page==='dash')renderDash();
+  if(page==='hist')renderHist();
+  if(page==='settings')loadKeyUI();
+}
+
+function pnl(ep,xp){if(!ep||!xp||ep===0)return null;return((xp-ep)/ep)*100;}
+const epsL={beat:'Beat↑',inline:'—',miss:'Miss↓'};
+const revL={raised:'↑',flat:'→',lowered:'↓'};
+const siL={high:'Alto',med:'Medio',low:'Bajo'};
+const tmL={'2d':'2d antes','1d':'1d antes','sd':'mismo día'};
+
+function tradeText(t){
+  const ef={beat:'Beat',inline:'In-line',miss:'Miss'};
+  const rf={raised:'al alza',flat:'planas',lowered:'a la baja'};
+  const sf={high:'>20%',med:'5-20%',low:'<5%'};
+  return `${t.tk}|${t.mkt}|entrada:${t.ep}(${tmL[t.tm]||t.tm})${t.ed}|salida:${t.xp||'open'}${t.xd||''}|P&L:${t.p!=null?t.p.toFixed(2)+'%':'open'}|score:${t.sc||'—'}|EPS:${ef[t.eps]||t.eps}|rev:${rf[t.rev]||t.rev}|SI:${sf[t.si]||t.si}|vol≥1x:${t.vol==='yes'?'sí':'no'}|res:${t.res||'open'}|notas:${t.nt||'—'}`;
+}
+
+async function callClaude(messages,useSearch=false){
+  const key=getKey();
+  if(!key)throw new Error('Sin API key. Ve a Settings.');
+  const body={model:'claude-sonnet-4-20250514',max_tokens:4000,messages};
+  if(useSearch)body.tools=[{type:'web_search_20250305',name:'web_search'}];
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify(body)
+  });
+  if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.error?.message||`Error ${res.status}`);}
+  return await res.json();
+}
+
+function extractText(data){return(data.content||[]).map(b=>b.type==='text'?b.text:'').filter(Boolean).join('');}
+function parseJSON(raw){const m=raw.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);if(!m)throw new Error('JSON no encontrado');return JSON.parse(m[0]);}
+
+async function buscarCandidatos(){
+  if(!getKey()){alert('Configura tu API key en Settings primero.');nav('settings');return;}
+  const mkt=document.getElementById('c-mkt').value;
+  const win=document.getElementById('c-window').value;
+  const minSc=document.getElementById('c-minscore').value;
+  const btn=document.getElementById('btn-buscar');
+  const stream=document.getElementById('c-stream');
+  const grid=document.getElementById('cand-grid');
+  btn.disabled=true;btn.textContent='Buscando...';
+  stream.style.display='block';stream.textContent='⟳ Iniciando búsqueda con web search...\n';
+  grid.innerHTML='';
+  const today=new Date().toISOString().split('T')[0];
+  const mktDesc={US:'mercados US (NYSE y NASDAQ)',EU:'mercados europeos (LSE, XETRA, Euronext)',ALL:'todos los mercados globales'}[mkt];
+  const winDesc={'24h':'próximas 24 horas','48h':'próximas 48 horas',week:'próximos 5 días hábiles'}[win];
+
+  const prompt=`Eres el asistente de trading de Raul. Hoy es ${today}. Busca candidatos de earnings plays para ${mktDesc} con earnings en las ${winDesc}.
+
+FRAMEWORK DE SCORING (máximo 10 puntos):
+1. Timing earnings dentro de 48h: +2pts
+2. Vol. institucional acumulación ≥1.0x (HARD FILTER - si no cumple, descalificar): +2pts
+3. Sentimiento social positivo: +1.5pts
+4. Historial EPS beats consecutivos + revisiones estimados AL ALZA (factor más predictivo): +3pts
+5. Short interest alto >10% como amplificador: +1.5pts
+
+FILTROS DE DESCALIFICACIÓN: vol acumulación <1.0x, historial misses >50%, guidance negativo reciente.
+
+USA WEB SEARCH para:
+1. Calendario de earnings ${winDesc} en ${mktDesc}
+2. Para cada candidato: historial EPS últimos 4 trimestres, volumen vs media 30d, short interest, revisiones analistas
+3. Puntúa con el framework. Solo incluye los que superen ${minSc}/10. Máximo 5 candidatos.
+
+Devuelve SOLO JSON puro sin markdown:
+{"fecha_busqueda":"${today}","macro_nota":"contexto macro relevante breve","candidatos":[{"ticker":"","nombre":"","mercado":"","earnings_date":"YYYY-MM-DD","earnings_timing":"BMO/AMC","score":8.5,"top_pick":true,"eps_historial":"4 beats consecutivos","revision_estimados":"subidas","short_interest":"15%","vol_acumulacion":"1.3x","sentimiento":"positivo","precio_actual":"100.50","zona_entrada":"99-101","precio_objetivo":"108","stop_loss":"96","rationale":"Por qué es buen candidato según el framework en 2-3 frases","riesgo_principal":"El principal riesgo","timing_entrada":"2d","eps_val":"beat","rev_val":"raised","si_val":"med","vol_val":"yes"}]}`;
+
+  try{
+    stream.textContent+='⟳ Claude ejecutando búsquedas de mercado...\n';
+    let messages=[{role:'user',content:prompt}];
+    let data=await callClaude(messages,true);
+    let iters=0;
+    while(data.stop_reason==='tool_use'&&iters++<8){
+      const toolUses=(data.content||[]).filter(b=>b.type==='tool_use');
+      for(const tu of toolUses){stream.textContent+=`⟳ Buscando: "${tu.input?.query||'datos de mercado'}"...\n`;}
+      const toolResults=toolUses.map(tu=>({type:'tool_result',tool_use_id:tu.id,content:'[search completed]'}));
+      messages=[{role:'user',content:prompt},{role:'assistant',content:data.content},{role:'user',content:toolResults}];
+      data=await callClaude(messages,true);
+    }
+    stream.textContent+='✓ Análisis completado. Procesando candidatos...\n';
+    const raw=extractText(data);
+    const result=parseJSON(raw);
+    if(result.macro_nota)stream.textContent+=`\n📊 Macro: ${result.macro_nota}`;
+    renderCandidatos(result.candidatos||[]);
+  }catch(e){
+    stream.textContent+=`\n✗ Error: ${e.message}`;
+    if(e.message.includes('API key'))nav('settings');
+  }finally{btn.disabled=false;btn.textContent='Buscar candidatos';}
+}
+
+function renderCandidatos(cands){
+  const grid=document.getElementById('cand-grid');
+  if(!cands||cands.length===0){grid.innerHTML='<div class="empty">No se encontraron candidatos que superen el score mínimo.</div>';return;}
+  const scoreColor=s=>s>=8?'var(--green)':s>=7?'var(--amber)':'var(--red)';
+  grid.innerHTML=cands.map((c,i)=>{
+    const isTop=c.top_pick||i===0;
+    const pills=[
+      {label:`EPS: ${c.eps_historial}`,cls:c.eps_val==='beat'?'good':'warn'},
+      {label:`Rev: ${c.revision_estimados}`,cls:c.rev_val==='raised'?'good':c.rev_val==='lowered'?'bad':''},
+      {label:`SI: ${c.short_interest}`,cls:c.si_val==='high'?'good':''},
+      {label:`Vol: ${c.vol_acumulacion}`,cls:c.vol_val==='yes'?'good':'bad'},
+      {label:c.earnings_timing||'',cls:''},
+      {label:c.earnings_date,cls:''},
+    ].filter(p=>p.label);
+    const cd=JSON.stringify(c).replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return`<div class="cand-card ${isTop?'top-pick':''}">
+      ${isTop?'<div class="top-badge">TOP PICK</div>':''}
+      <div class="cand-header">
+        <div><div class="cand-ticker">${c.ticker}</div><div class="cand-name">${c.nombre} · ${c.mercado}</div></div>
+        <div class="cand-score-wrap"><div class="cand-score" style="color:${scoreColor(c.score)}">${c.score}</div><div class="cand-score-lbl">/ 10</div></div>
+      </div>
+      <div class="cand-pills">${pills.map(p=>`<span class="pill ${p.cls}">${p.label}</span>`).join('')}</div>
+      <div class="cand-rationale">${c.rationale}</div>
+      ${c.riesgo_principal?`<div style="font-size:11px;color:var(--amber);margin-bottom:0.875rem;">⚠ ${c.riesgo_principal}</div>`:''}
+      <div style="font-size:11px;color:var(--text3);margin-bottom:0.75rem;">Zona entrada: <span style="color:var(--text);font-family:var(--font);">${c.zona_entrada||'—'}</span> · Objetivo: <span style="color:var(--green);font-family:var(--font);">${c.precio_objetivo||'—'}</span> · Stop: <span style="color:var(--red);font-family:var(--font);">${c.stop_loss||'—'}</span></div>
+      <div class="cand-save-row">
+        <label class="flbl">Precio compra:</label>
+        <input type="number" id="ep-${c.ticker}" value="${c.precio_actual||''}" step="0.01">
+        <label class="flbl">Fecha:</label>
+        <input type="date" id="ed-${c.ticker}" value="${new Date().toISOString().split('T')[0]}">
+        <button class="btn btn-green btn-sm" id="save-${c.ticker}" onclick="saveCandidato('${c.ticker}',${cd})">+ Guardar en historial</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveCandidato(ticker,c){
+  const epEl=document.getElementById(`ep-${ticker}`);
+  const edEl=document.getElementById(`ed-${ticker}`);
+  const ep=parseFloat(epEl?.value);
+  const ed=edEl?.value;
+  if(!ep||!ed){alert('Introduce precio de compra y fecha antes de guardar.');return;}
+  trades.push({
+    id:Date.now(),tk:ticker,
+    mkt:c.mercado||'NYSE',
+    ed,ep,xd:null,xp:null,p:null,
+    sc:c.score||null,
+    tm:c.timing_entrada||'2d',
+    eps:c.eps_val||'beat',
+    rev:c.rev_val||'raised',
+    si:c.si_val||'low',
+    vol:c.vol_val||'yes',
+    nt:`[Candidato IA · score ${c.score}] ${c.rationale} | Zona: ${c.zona_entrada||'—'} | Objetivo: ${c.precio_objetivo||'—'} | Stop: ${c.stop_loss||'—'} | Riesgo: ${c.riesgo_principal||'—'}`,
+    res:null,aiLesson:null,aiPattern:null
+  });
+  saveTrades();
+  const btn=document.getElementById(`save-${ticker}`);
+  if(btn){btn.textContent='✓ Guardada';btn.disabled=true;btn.classList.remove('btn-green');btn.classList.add('btn-primary');}
+}
+
+async function openWeeklyReview(){
+  if(!getKey()){alert('Configura tu API key en Settings primero.');nav('settings');return;}
+  openModal('Review semanal IA','análisis de patrones y métricas');
+  const body=document.getElementById('modal-body');
+  body.innerHTML='<div class="ai-block loading">Analizando operativa...</div>';
+  const now=new Date();
+  const weekAgo=new Date(now-7*24*60*60*1000);
+  const weekTrades=trades.filter(t=>new Date(t.ed||'2000-01-01')>=weekAgo);
+  const closed=trades.filter(t=>t.res!==null);
+  const wins=closed.filter(t=>t.res==='win');
+  const losses=closed.filter(t=>t.res==='loss');
+  if(trades.length===0){body.innerHTML='<div class="ai-block">No hay operaciones aún. Añade operaciones primero.</div>';return;}
+  const prompt=`Genera review semanal de la operativa de Raul (earnings plays framework).
+
+ESTA SEMANA (${weekTrades.length} ops): ${weekTrades.length>0?weekTrades.map(t=>tradeText(t)).join(' || '):'ninguna'}
+HISTORIAL: ${closed.length} cerradas | ${wins.length} wins | ${losses.length} losses | Win rate: ${closed.length?((wins.length/closed.length)*100).toFixed(0)+'%':'—'}
+P&L total: ${closed.reduce((s,t)=>s+(t.p||0),0).toFixed(2)}%
+Score medio ganadoras: ${wins.filter(t=>t.sc).length?(wins.filter(t=>t.sc).reduce((s,t)=>s+t.sc,0)/wins.filter(t=>t.sc).length).toFixed(1):'—'} | Score medio perdedoras: ${losses.filter(t=>t.sc).length?(losses.filter(t=>t.sc).reduce((s,t)=>s+t.sc,0)/losses.filter(t=>t.sc).length).toFixed(1):'—'}
+EPS beat en ganadoras: ${wins.filter(t=>t.eps==='beat').length}/${wins.length} | Revisiones alza en ganadoras: ${wins.filter(t=>t.rev==='raised').length}/${wins.length}
+
+Devuelve SOLO JSON:{"resumen_semana":"","metricas_clave":"","patron_ganador":"","patron_perdedor":"","factor_mas_predictivo":"","ajuste_recomendado":"","proxima_semana":"","score_semana":""}`;
+  try{
+    const data=await callClaude([{role:'user',content:prompt}]);
+    const p=parseJSON(extractText(data));
+    body.innerHTML=`
+      <div class="ai-block">${p.resumen_semana}</div>
+      <div><span class="chip chip-b">Métricas clave</span><div class="ai-block">${p.metricas_clave}</div></div>
+      <div><span class="chip chip-g">Patrón ganador</span><div class="ai-block">${p.patron_ganador}</div></div>
+      <div><span class="chip chip-r">Patrón perdedor</span><div class="ai-block">${p.patron_perdedor}</div></div>
+      <div><span class="chip chip-p">Factor más predictivo</span><div class="ai-block" style="font-weight:500;">${p.factor_mas_predictivo}</div></div>
+      <div><span class="chip chip-a">Ajuste recomendado</span><div class="ai-block">${p.ajuste_recomendado}</div></div>
+      <div><span class="chip chip-b">Próxima semana</span><div class="ai-block">${p.proxima_semana}</div></div>
+      <div><span class="chip chip-n">Score semana</span><div class="ai-block">${p.score_semana}</div></div>`;
+  }catch(e){body.innerHTML=`<div class="ai-block loading">Error: ${e.message}</div>`;}
+}
+
+function addTrade(){
+  const tk=document.getElementById('f-tk').value.trim().toUpperCase();
+  const ep=parseFloat(document.getElementById('f-ep').value);
+  const xp=parseFloat(document.getElementById('f-xp').value);
+  const ed=document.getElementById('f-ed').value;
+  const msg=document.getElementById('f-msg');
+  if(!tk||!ep||!ed){msg.textContent='Mínimo: ticker, fecha entrada y precio entrada.';msg.className='msg err';return;}
+  const p=pnl(ep,xp);
+  trades.push({id:Date.now(),tk,mkt:document.getElementById('f-mkt').value,ed,ep,xd:document.getElementById('f-xd').value,xp:xp||null,p,sc:parseFloat(document.getElementById('f-sc').value)||null,tm:document.getElementById('f-tm').value,eps:document.getElementById('f-eps').value,rev:document.getElementById('f-rev').value,si:document.getElementById('f-si').value,vol:document.getElementById('f-vol').value,nt:document.getElementById('f-nt').value,res:p!==null?(p>=0?'win':'loss'):null,aiLesson:null,aiPattern:null});
+  saveTrades();
+  ['f-tk','f-ep','f-xp','f-ed','f-xd','f-sc','f-nt'].forEach(id=>document.getElementById(id).value='');
+  msg.textContent=`✓ ${tk} guardada.`;msg.className='msg ok';
+  setTimeout(()=>{msg.textContent='';},3000);
+}
+
+async function openLesson(id){
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  openModal(`Lección — ${t.tk}`,`${t.mkt} · ${t.ed} · ${t.res==='win'?'Win':t.res==='loss'?'Loss':'Abierta'}`);
+  const body=document.getElementById('modal-body');
+  if(t.aiLesson){body.innerHTML=renderLesson(t.aiLesson)+`<button class="btn btn-sm" style="margin-top:0.75rem;" onclick="genLesson(${id})">Regenerar</button>`;return;}
+  body.innerHTML='<div class="ai-block loading">Analizando con Claude...</div>';
+  await genLesson(id,true);
+}
+async function genLesson(id,silent=false){
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  const body=document.getElementById('modal-body');
+  if(!silent)body.innerHTML='<div class="ai-block loading">Regenerando...</div>';
+  try{
+    const data=await callClaude([{role:'user',content:`Analiza esta earnings play y genera lección aprendida. OP:${tradeText(t)}. Framework:timing 48h,vol≥1x(duro),sentimiento,EPS+revisiones(más predictivo),SI amplificador. Devuelve SOLO JSON:{"resumen":"","factores_clave":"","lo_que_funciono":"","lo_que_mejorar":"","regla_practica":"","score_calidad":""}`}]);
+    const parsed=parseJSON(extractText(data));
+    const idx=trades.findIndex(x=>x.id===id);
+    if(idx>=0){trades[idx].aiLesson=parsed;saveTrades();}
+    body.innerHTML=renderLesson(parsed)+`<button class="btn btn-sm" style="margin-top:0.75rem;" onclick="genLesson(${id})">Regenerar</button>`;
+  }catch(e){body.innerHTML=`<div class="ai-block loading">Error: ${e.message}</div><button class="btn btn-sm" style="margin-top:0.75rem;" onclick="genLesson(${id})">Reintentar</button>`;}
+}
+function renderLesson(l){return`<div class="ai-block">${l.resumen}</div><div><span class="chip chip-g">Lo que funcionó</span><div class="ai-block">${l.lo_que_funciono}</div></div><div><span class="chip chip-a">Factor clave</span><div class="ai-block">${l.factores_clave}</div></div><div><span class="chip chip-r">Mejorar</span><div class="ai-block">${l.lo_que_mejorar}</div></div><div><span class="chip chip-b">Regla práctica</span><div class="ai-block" style="font-weight:500;">${l.regla_practica}</div></div><div><span class="chip chip-n">Calidad decisión</span><div class="ai-block">${l.score_calidad}</div></div>`;}
+
+async function openPattern(id){
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  openModal(`Patrón — ${t.tk}`,'comparativa vs historial');
+  const body=document.getElementById('modal-body');
+  if(t.aiPattern){body.innerHTML=renderPattern(t.aiPattern)+`<button class="btn btn-sm" style="margin-top:0.75rem;" onclick="genPattern(${id})">Reanalizar</button>`;return;}
+  body.innerHTML='<div class="ai-block loading">Comparando con historial...</div>';
+  await genPattern(id,true);
+}
+async function genPattern(id,silent=false){
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  const body=document.getElementById('modal-body');
+  if(!silent)body.innerHTML='<div class="ai-block loading">Reanalizando...</div>';
+  const wins=trades.filter(x=>x.res==='win'&&x.id!==id);
+  const losses=trades.filter(x=>x.res==='loss'&&x.id!==id);
+  const fmt=arr=>arr.length===0?'ninguna':arr.map(x=>`${x.tk}(${x.mkt}):EPS ${x.eps},rev ${x.rev},SI ${x.si},sc ${x.sc||'—'},P&L ${x.p!=null?x.p.toFixed(2)+'%':'open'}`).join('|');
+  try{
+    const data=await callClaude([{role:'user',content:`Analiza si esta op comparte patrones con historial. OP:${tradeText(t)} WINS(${wins.length}):${fmt(wins)} LOSSES(${losses.length}):${fmt(losses)} Devuelve SOLO JSON:{"similitud_ganadoras":"0-100","similitud_perdedoras":"0-100","patron_ganador_tipico":"","coincidencias":"","divergencias":"","veredicto":"","confianza":"bajo/medio/alto"}`}]);
+    const parsed=parseJSON(extractText(data));
+    const idx=trades.findIndex(x=>x.id===id);
+    if(idx>=0){trades[idx].aiPattern=parsed;saveTrades();}
+    body.innerHTML=renderPattern(parsed)+`<button class="btn btn-sm" style="margin-top:0.75rem;" onclick="genPattern(${id})">Reanalizar</button>`;
+  }catch(e){body.innerHTML=`<div class="ai-block loading">Error: ${e.message}</div><button class="btn btn-sm" style="margin-top:0.75rem;" onclick="genPattern(${id})">Reintentar</button>`;}
+}
+function renderPattern(p){
+  const sg=parseInt(p.similitud_ganadoras)||0;const sp=parseInt(p.similitud_perdedoras)||0;
+  const cls=sg>=65?'high':sg>=40?'mid':'low';
+  return`<div class="pct-row"><div class="pct-card"><div class="pct-lbl">Similitud ganadoras</div><div class="pct-val ${cls}">${sg}%</div></div><div class="pct-card"><div class="pct-lbl">Similitud perdedoras</div><div class="pct-val">${sp}%</div></div></div><span class="chip chip-n">Confianza: ${p.confianza}</span><div><span class="chip chip-g">Patrón ganador típico</span><div class="ai-block">${p.patron_ganador_tipico}</div></div><div><span class="chip chip-g">Coincidencias</span><div class="ai-block">${p.coincidencias}</div></div><div><span class="chip chip-r">Divergencias</span><div class="ai-block">${p.divergencias}</div></div><div><span class="chip chip-b">Veredicto</span><div class="ai-block" style="font-weight:500;">${p.veredicto}</div></div>`;
+}
+
+function renderDash(){
+  document.getElementById('dash-date').textContent=new Date().toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const g=document.getElementById('m-grid');
+  if(trades.length===0){g.innerHTML=`<div style="color:var(--text3);font-size:13px;grid-column:1/-1;padding:1.5rem 0;">Usa "Candidatos IA" para encontrar oportunidades de earnings.</div>`;renderChart([],[]);document.getElementById('mkt-dist').innerHTML='';return;}
+  const closed=trades.filter(t=>t.res!==null);
+  const wins=trades.filter(t=>t.res==='win');
+  const withPnl=trades.filter(t=>t.p!==null);
+  const wr=closed.length?(wins.length/closed.length)*100:0;
+  const avgR=withPnl.length?withPnl.reduce((s,t)=>s+t.p,0)/withPnl.length:0;
+  const totP=withPnl.reduce((s,t)=>s+t.p,0);
+  const avgSc=trades.filter(t=>t.sc).length?trades.filter(t=>t.sc).reduce((s,t)=>s+t.sc,0)/trades.filter(t=>t.sc).length:0;
+  const best=withPnl.length?withPnl.reduce((b,t)=>t.p>(b?.p??-Infinity)?t:b,null):null;
+  const worst=withPnl.length?withPnl.reduce((b,t)=>t.p<(b?.p??Infinity)?t:b,null):null;
+  const openCount=trades.filter(t=>t.res===null).length;
+  g.innerHTML=`
+    <div class="mc"><div class="mc-lbl">Total ops</div><div class="mc-val">${trades.length}</div></div>
+    <div class="mc"><div class="mc-lbl">Abiertas</div><div class="mc-val">${openCount}</div></div>
+    <div class="mc"><div class="mc-lbl">Win Rate</div><div class="mc-val ${wr>=50?'pos':'neg'}">${wr.toFixed(0)}%</div></div>
+    <div class="mc"><div class="mc-lbl">Retorno medio</div><div class="mc-val ${avgR>=0?'pos':'neg'}">${avgR>=0?'+':''}${avgR.toFixed(2)}%</div></div>
+    <div class="mc"><div class="mc-lbl">P&L total</div><div class="mc-val ${totP>=0?'pos':'neg'}">${totP>=0?'+':''}${totP.toFixed(2)}%</div></div>
+    <div class="mc"><div class="mc-lbl">Score medio</div><div class="mc-val">${avgSc?avgSc.toFixed(1):'—'}</div></div>
+    ${best?`<div class="mc"><div class="mc-lbl">Mejor</div><div class="mc-val pos" style="font-size:16px;">${best.tk} +${best.p.toFixed(1)}%</div></div>`:''}
+    ${worst?`<div class="mc"><div class="mc-lbl">Peor</div><div class="mc-val neg" style="font-size:16px;">${worst.tk} ${worst.p.toFixed(1)}%</div></div>`:''}`;
+  const sorted=[...withPnl].sort((a,b)=>new Date(a.ed)-new Date(b.ed));
+  let cum=0;const lbls=[''];const data=[0];
+  sorted.forEach(t=>{cum+=t.p;lbls.push(t.tk);data.push(parseFloat(cum.toFixed(2)));});
+  renderChart(lbls,data);
+  const mkts={};trades.forEach(t=>{mkts[t.mkt]=(mkts[t.mkt]||0)+1;});
+  document.getElementById('mkt-dist').innerHTML=Object.entries(mkts).sort((a,b)=>b[1]-a[1]).map(([m,c])=>`<div class="mkt-row"><span class="mkt-name">${m}</span><div class="mkt-bar-wrap"><div class="mkt-bar" style="width:${(c/trades.length*100).toFixed(0)}%"></div></div><span class="mkt-count">${c}</span></div>`).join('');
+}
+
+function renderChart(lbls,data){
+  const ctx=document.getElementById('pnl-chart').getContext('2d');
+  if(pnlChart)pnlChart.destroy();
+  if(!lbls||lbls.length<=1){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.font='12px sans-serif';ctx.fillStyle='#555';ctx.textAlign='center';ctx.fillText('Añade operaciones cerradas para ver el gráfico',ctx.canvas.width/2,70);return;}
+  const col=data[data.length-1]>=0?'#22c55e':'#ef4444';
+  pnlChart=new Chart(ctx,{type:'line',data:{labels:lbls,datasets:[{data,borderColor:col,backgroundColor:col+'15',borderWidth:1.5,fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:col}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#555'}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10},color:'#555',callback:v=>v.toFixed(1)+'%'}}}}});
+}
+
+function renderHist(){
+  const fm=document.getElementById('fi-mkt')?.value||'';
+  const fr=document.getElementById('fi-res')?.value||'';
+  const list=trades.filter(t=>{if(fm&&t.mkt!==fm)return false;if(fr&&t.res!==fr)return false;return true;}).sort((a,b)=>new Date(b.ed)-new Date(a.ed));
+  const tb=document.getElementById('t-body');
+  document.getElementById('no-op').style.display=list.length===0?'block':'none';
+  tb.innerHTML=list.map(t=>{
+    const ps=t.p!==null?`${t.p>=0?'+':''}${t.p.toFixed(2)}%`:'open';
+    const pc=t.p!==null?(t.p>=0?'var(--green)':'var(--red)'):'var(--text3)';
+    return`<tr>
+      <td class="mono" style="font-weight:600;">${t.tk}</td>
+      <td style="color:var(--text3);">${t.mkt}</td>
+      <td style="color:var(--text3);white-space:nowrap;">${t.ed}</td>
+      <td class="mono" style="font-weight:600;color:${pc};">${ps}</td>
+      <td class="mono">${t.sc||'—'}</td>
+      <td style="color:var(--text3);">${epsL[t.eps]||'—'}</td>
+      <td style="color:var(--text3);">${revL[t.rev]||'—'}</td>
+      <td>${t.res==='win'?'<span class="badge badge-win">Win</span>':t.res==='loss'?'<span class="badge badge-loss">Loss</span>':'<span class="badge badge-open">Open</span>'}</td>
+      <td><button class="btn btn-ai ${t.aiLesson?'cached':''}" onclick="openLesson(${t.id})">${t.aiLesson?'Ver':'Generar'}</button></td>
+      <td><button class="btn btn-ai ${t.aiPattern?'cached':''}" onclick="openPattern(${t.id})">${t.aiPattern?'Ver':'Analizar'}</button></td>
+      <td><button class="btn btn-danger" onclick="delTrade(${t.id})">×</button></td>
+    </tr>`;
+  }).join('');
+}
+function delTrade(id){if(!confirm('¿Eliminar?'))return;trades=trades.filter(t=>t.id!==id);saveTrades();renderHist();}
+
+function exportCSV(){
+  const hdr='Ticker,Mercado,Fecha entrada,Precio entrada,Fecha salida,Precio salida,PnL%,Score,Timing,EPS,Revision,ShortInterest,VolAcum,Resultado,Notas';
+  const rows=trades.map(t=>[t.tk,t.mkt,t.ed,t.ep,t.xd||'',t.xp||'',t.p!=null?t.p.toFixed(2):'',t.sc||'',t.tm,t.eps,t.rev,t.si,t.vol,t.res||'open',`"${(t.nt||'').replace(/"/g,"'")}"`].join(','));
+  dl('earnings_plays.csv','text/csv',[hdr,...rows].join('\n'));
+}
+function exportJSON(){dl('earnings_plays.json','application/json',JSON.stringify(trades,null,2));}
+function dl(fn,type,content){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=fn;a.click();}
+function clearAll(){if(!confirm('¿Borrar TODO? No se puede deshacer.'))return;trades=[];saveTrades();renderDash();}
+
+function openModal(title,sub){document.getElementById('modal-title').textContent=title;document.getElementById('modal-sub').textContent=sub;document.getElementById('modal-body').innerHTML='';document.getElementById('modal').classList.add('open');}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function maybeClose(e){if(e.target===document.getElementById('modal'))closeModal();}
+
+loadTrades();renderDash();
+</script>
+</body>
+</html>
